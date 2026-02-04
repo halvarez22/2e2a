@@ -1,4 +1,4 @@
-import { initializeApp, getApps } from 'firebase/app'
+import { initializeApp, getApps, getApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 
 const clientCredentials = {
@@ -10,13 +10,15 @@ const clientCredentials = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 }
 
-let app;
-if (!getApps().length) {
-  if (clientCredentials.apiKey) {
-    app = initializeApp(clientCredentials)
-  }
-} else {
-  app = getApps()[0]
+// Singleton pattern to ensure Firebase only initializes when we have a key
+// and avoids errors during SSR or static build in Vercel.
+const getFirebaseApp = () => {
+  if (getApps().length > 0) return getApp();
+  if (clientCredentials.apiKey) return initializeApp(clientCredentials);
+  return null;
 }
 
-export const auth = app ? getAuth(app) : ({} as any)
+const app = getFirebaseApp();
+
+// Use a getter for auth to prevent immediate execution error if app is null
+export const auth = app ? getAuth(app) : ({} as any);
